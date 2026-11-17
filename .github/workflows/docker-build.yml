@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Docker Image
+    name: Build and Test Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -16,3 +16,25 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t project-one:test .
+
+      - name: Run Docker container
+        run: docker run -d --name project-one-test -p 8080:80 project-one:test
+
+      - name: Test website response
+        run: |
+          for i in {1..10}; do
+            if curl -fsS http://127.0.0.1:8080/ > /dev/null; then
+              echo "Website is responding successfully"
+              exit 0
+            fi
+            echo "Waiting for website..."
+            sleep 2
+          done
+
+          echo "Website did not respond"
+          docker logs project-one-test
+          exit 1
+
+      - name: Cleanup test container
+        if: always()
+        run: docker rm -f project-one-test
